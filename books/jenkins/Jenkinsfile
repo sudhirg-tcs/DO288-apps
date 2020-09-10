@@ -6,7 +6,7 @@ pipeline {
     agent {
       node {
         //TODO: Add label for Node.js jenkins agent
-label 'nodejs'
+        label 'nodejs'
       }
     }
 
@@ -144,11 +144,12 @@ oc expose svc/${APP_NAME}
 
                     openshift.withCluster() {
                         //TODO: Watch deployment until pod is in 'Running' state
-sh '''
-oc project ${STAGE_PROJECT}
-oc new-app --name books -i books:stage
-oc expose svc/${APP_NAME}
-'''
+openshift.withProject( "${STAGE_PROJECT}" ) {
+def deployment = openshift.selector("dc", "${APP_NAME}").rollout()
+openshift.selector("dc", "${APP_NAME}").related('pods').untilEach(1) {
+return (it.object().status.phase == "Running")
+}
+}
 
                         echo "Deployment to Staging env is complete. Access the app at the URL http://${routeHost}."
                     }
